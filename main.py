@@ -27,29 +27,38 @@ def comandos():
     global rodando, ultimo_update_id
 
     try:
-        data = requests.get(
-            f"https://api.telegram.org/bot{TOKEN}/getUpdates",
-            timeout=10
-        ).json()
+        url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
 
-        for u in data.get("result", []):
-            uid = u["update_id"]
+        params = {
+            "timeout": 30,
+            "offset": ultimo_update_id + 1 if ultimo_update_id else None
+        }
 
-            if ultimo_update_id and uid <= ultimo_update_id:
+        response = requests.get(url, params=params, timeout=35).json()
+
+        for update in response.get("result", []):
+            ultimo_update_id = update["update_id"]
+
+            if "message" not in update:
                 continue
 
-            ultimo_update_id = uid
+            chat_id = str(update["message"]["chat"]["id"])
+            texto = update["message"].get("text", "")
 
-            if "message" in u:
-                txt = u["message"].get("text", "")
+            # 🔒 segurança: só você controla
+            if chat_id != CHAT_ID:
+                continue
 
-                if txt == "/ligar":
-                    rodando = True
-                    enviar("✅ BOT LIGADO")
+            if texto == "/ligar":
+                rodando = True
+                enviar("✅ BOT LIGADO")
 
-                elif txt == "/desligar":
-                    rodando = False
-                    enviar("❌ BOT DESLIGADO")
+            elif texto == "/desligar":
+                rodando = False
+                enviar("❌ BOT DESLIGADO")
+
+            elif texto == "/status":
+                enviar(f"🤖 Status: {'ON' if rodando else 'OFF'}")
 
     except Exception as e:
         print("Erro comandos:", e)
